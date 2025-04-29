@@ -1,0 +1,25 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: development
+    scripts:
+      - name: Set up code signing settings
+        script: |
+          echo "Setting up code signing"
+      - name: Flutter build
+        script: |
+          flutter clean
+          flutter build ios --debug
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - umermumer6@gmail.com 
