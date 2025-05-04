@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/calculation.dart';
 import 'database_provider.dart';
+import 'scientific_operations.dart';
 
 part 'calculator_provider.g.dart';
 
@@ -12,7 +13,8 @@ class CalculatorState {
   final bool isNewNumber;
   final List<Calculation> history;
   final bool isLoading;
-  static const int maxDigits = 16;
+  final bool isScientificMode;
+  static const int maxDigits = 20;
 
   CalculatorState({
     this.display = '0',
@@ -22,6 +24,7 @@ class CalculatorState {
     this.isNewNumber = true,
     List<Calculation>? history,
     this.isLoading = false,
+    this.isScientificMode = false,
   }) : history = history ?? [];
 
   CalculatorState copyWith({
@@ -32,6 +35,7 @@ class CalculatorState {
     bool? isNewNumber,
     List<Calculation>? history,
     bool? isLoading,
+    bool? isScientificMode,
   }) {
     return CalculatorState(
       display: display ?? this.display,
@@ -41,6 +45,7 @@ class CalculatorState {
       isNewNumber: isNewNumber ?? this.isNewNumber,
       history: history ?? this.history,
       isLoading: isLoading ?? this.isLoading,
+      isScientificMode: isScientificMode ?? this.isScientificMode,
     );
   }
 }
@@ -195,7 +200,10 @@ class Calculator extends _$Calculator {
   }
 
   void clear() {
-    state = CalculatorState(history: state.history);
+    state = CalculatorState(
+      history: state.history,
+      isScientificMode: state.isScientificMode,
+    );
   }
 
   Future<void> clearHistory() async {
@@ -204,6 +212,44 @@ class Calculator extends _$Calculator {
       state = state.copyWith(history: []);
     } catch (e) {
       print('Error clearing history: $e');
+    }
+  }
+
+  void toggleScientificMode() {
+    state = state.copyWith(isScientificMode: !state.isScientificMode);
+  }
+
+  Future<void> handleScientificFunction(String function) async {
+    if (state.display == 'Error') return;
+
+    try {
+      final number = double.parse(state.display);
+      final scientificOperations = ref.read(scientificOperationsProvider);
+      final (result, expression) = scientificOperations.calculate(
+        function,
+        number,
+      );
+
+      final newCalculation = Calculation(
+        expression: expression,
+        result: _formatNumber(result.toStringAsFixed(10)),
+        timestamp: DateTime.now(),
+      );
+
+      try {
+        await DatabaseHelper.instance.insertCalculation(newCalculation);
+        await _loadHistory();
+      } catch (e) {
+        print('Error saving calculation: $e');
+      }
+
+      state = state.copyWith(
+        display: _formatNumber(result.toStringAsFixed(10)),
+        equation: '',
+        isNewNumber: true,
+      );
+    } catch (e) {
+      state = state.copyWith(display: 'Error', equation: '', isNewNumber: true);
     }
   }
 }

@@ -10,14 +10,14 @@ class Display extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (equation.isNotEmpty)
-            GestureDetector(
-              onLongPress: () {
+          GestureDetector(
+            onLongPress: () {
+              if (equation.isNotEmpty) {
                 Clipboard.setData(ClipboardData(text: equation));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -25,13 +25,21 @@ class Display extends StatelessWidget {
                     duration: Duration(seconds: 1),
                   ),
                 );
-              },
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              alignment: Alignment.centerRight,
               child: Text(
                 equation,
-                style: const TextStyle(fontSize: 24, color: Colors.grey),
-                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.grey[400],
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
+          ),
           const SizedBox(height: 8),
           GestureDetector(
             onLongPress: () {
@@ -43,14 +51,22 @@ class Display extends StatelessWidget {
                 ),
               );
             },
-            child: Text(
-              display,
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  display,
+                  style: const TextStyle(
+                    fontSize: 48,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w300,
+                  ),
+                  maxLines: 1,
+                ),
               ),
-              textAlign: TextAlign.end,
             ),
           ),
         ],

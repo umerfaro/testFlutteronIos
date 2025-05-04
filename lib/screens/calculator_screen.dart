@@ -17,6 +17,37 @@ class CalculatorScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: PopupMenuButton<String>(
+          icon: const Icon(Icons.calculate_outlined),
+          tooltip: 'Calculator Mode',
+          onSelected: (value) {
+            if (value == 'toggle') {
+              ref.read(calculatorProvider.notifier).toggleScientificMode();
+            }
+          },
+          itemBuilder:
+              (context) => [
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Row(
+                    children: [
+                      Icon(
+                        calculator.isScientificMode
+                            ? Icons.calculate
+                            : Icons.science_outlined,
+                        color: Colors.blue,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        calculator.isScientificMode
+                            ? 'Switch to Basic'
+                            : 'Switch to Scientific',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -34,26 +65,7 @@ class CalculatorScreen extends ConsumerWidget {
                 equation: calculator.equation,
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: CalculatorButtons(
-                onNumberPressed:
-                    (number) => ref
-                        .read(calculatorProvider.notifier)
-                        .handleNumber(number),
-                onOperationPressed:
-                    (operation) => ref
-                        .read(calculatorProvider.notifier)
-                        .handleOperation(operation),
-                onClear: () => ref.read(calculatorProvider.notifier).clear(),
-                onCalculate:
-                    () async =>
-                        await ref.read(calculatorProvider.notifier).calculate(),
-                onBackspace:
-                    () =>
-                        ref.read(calculatorProvider.notifier).handleBackspace(),
-              ),
-            ),
+            Expanded(flex: 2, child: const CalculatorButtons()),
           ],
         ),
       ),
