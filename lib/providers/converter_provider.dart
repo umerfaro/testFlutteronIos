@@ -48,21 +48,30 @@ class ConverterState {
 class Converter extends _$Converter {
   @override
   ConverterState build() {
-    // Always load history from DB when provider is created
-    Future.microtask(() => loadHistory());
+    // Initialize with empty history and loading state
     return ConverterState(
       fromUnit: lengthUnits[0],
       toUnit: lengthUnits[1],
-      loading: true,
+      loading: false,
+      history: const [],
     );
   }
 
   Future<void> loadHistory() async {
-    try {
+    // Only set loading state if we're not already loading
+    if (!state.loading) {
       state = state.copyWith(loading: true);
+    }
+
+    try {
       final history =
           await ConversionDatabaseHelper.instance.getAllConversions();
-      state = state.copyWith(history: history, loading: false);
+      // Only update state if the history has changed
+      if (history.length != state.history.length) {
+        state = state.copyWith(history: history, loading: false);
+      } else {
+        state = state.copyWith(loading: false);
+      }
     } catch (e, st) {
       print('Error loading conversion history: $e\n$st');
       state = state.copyWith(loading: false);

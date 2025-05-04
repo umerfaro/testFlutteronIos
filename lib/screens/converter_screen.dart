@@ -243,8 +243,24 @@ const timeUnits = [
   'Years',
 ];
 
-class ConverterScreen extends ConsumerWidget {
+class ConverterScreen extends ConsumerStatefulWidget {
   const ConverterScreen({super.key});
+
+  @override
+  ConsumerState<ConverterScreen> createState() => _ConverterScreenState();
+}
+
+class _ConverterScreenState extends ConsumerState<ConverterScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load history once when screen is initialized
+    Future.microtask(() => ref.read(converterProvider.notifier).loadHistory());
+  }
+
+  void _handleBack() {
+    Navigator.of(context).pop();
+  }
 
   IconData _iconForUnitType(UnitType type) {
     switch (type) {
@@ -266,226 +282,233 @@ class ConverterScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(converterProvider);
     final notifier = ref.read(converterProvider.notifier);
     final currentUnits = notifier.unitsForType(state.unitType);
 
-    // Trigger history load only if not already loaded
-    if (state.history.isEmpty && !state.loading) {
-      Future.microtask(() => notifier.loadHistory());
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Unit Converter'),
-        backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: 'Clear History',
-            onPressed: state.history.isEmpty ? null : notifier.clearHistory,
+    return WillPopScope(
+      onWillPop: () async {
+        _handleBack();
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Unit Converter'),
+          backgroundColor: Colors.black,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: _handleBack,
           ),
-        ],
-      ),
-      resizeToAvoidBottomInset: true,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Unit type dropdown with icon
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Unit Type',
-                  border: OutlineInputBorder(),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<UnitType>(
-                    value: state.unitType,
-                    isExpanded: true,
-                    items:
-                        UnitType.values.map((type) {
-                          return DropdownMenuItem<UnitType>(
-                            value: type,
-                            child: Row(
-                              children: [
-                                Icon(_iconForUnitType(type)),
-                                const SizedBox(width: 8),
-                                Text(unitTypeNames[type]!),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (type) {
-                      if (type != null) {
-                        notifier.setUnitType(type);
-                      }
-                    },
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: 'Clear History',
+              onPressed: state.history.isEmpty ? null : notifier.clearHistory,
+            ),
+          ],
+        ),
+        resizeToAvoidBottomInset: true,
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Unit type dropdown with icon
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Unit Type',
+                    border: OutlineInputBorder(),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // From/To unit dropdowns with swap button
-              Row(
-                children: [
-                  Expanded(
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'From',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: state.fromUnit,
-                          isExpanded: true,
-                          items:
-                              currentUnits.map((unit) {
-                                return DropdownMenuItem<String>(
-                                  value: unit,
-                                  child: Text(unit),
-                                );
-                              }).toList(),
-                          onChanged: (unit) {
-                            if (unit != null) {
-                              notifier.setFromUnit(unit);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.swap_horiz, size: 32),
-                    onPressed: notifier.swapUnits,
-                    tooltip: 'Swap units',
-                  ),
-                  Expanded(
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'To',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: state.toUnit,
-                          isExpanded: true,
-                          items:
-                              currentUnits.map((unit) {
-                                return DropdownMenuItem<String>(
-                                  value: unit,
-                                  child: Text(unit),
-                                );
-                              }).toList(),
-                          onChanged: (unit) {
-                            if (unit != null) {
-                              notifier.setToUnit(unit);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              // Input field
-              TextField(
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Enter value',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: notifier.setInputValue,
-              ),
-              const SizedBox(height: 24),
-              // Convert button
-              ElevatedButton.icon(
-                onPressed: notifier.convert,
-                icon: const Icon(Icons.compare_arrows),
-                label: const Text('Convert'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Result
-              if (state.result.isNotEmpty)
-                Card(
-                  color: Colors.black87,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        Text(
-                          '${state.inputValue} ${state.fromUnit} =',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${state.result} ${state.toUnit}',
-                          style: const TextStyle(
-                            color: Colors.orange,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<UnitType>(
+                      value: state.unitType,
+                      isExpanded: true,
+                      items:
+                          UnitType.values.map((type) {
+                            return DropdownMenuItem<UnitType>(
+                              value: type,
+                              child: Row(
+                                children: [
+                                  Icon(_iconForUnitType(type)),
+                                  const SizedBox(width: 8),
+                                  Text(unitTypeNames[type]!),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                      onChanged: (type) {
+                        if (type != null) {
+                          notifier.setUnitType(type);
+                        }
+                      },
                     ),
                   ),
                 ),
-              // History
-              const Divider(),
-              const Text(
-                'Conversion History',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              if (state.loading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              if (!state.loading)
-                SizedBox(
-                  height: 200,
-                  child:
-                      state.history.isEmpty
-                          ? const Center(child: Text('No history yet.'))
-                          : ListView.builder(
-                            itemCount: state.history.length,
-                            itemBuilder: (context, index) {
-                              final record = state.history[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                child: ListTile(
-                                  title: Text(
-                                    '${record.inputValue} ${record.fromUnit} → ${record.toUnit}',
-                                  ),
-                                  subtitle: Text(
-                                    '= ${record.result} (${record.unitType})',
-                                  ),
-                                  trailing: Text(
-                                    DateFormat(
-                                      'HH:mm:ss',
-                                    ).format(record.timestamp),
-                                  ),
-                                ),
-                              );
+                const SizedBox(height: 16),
+                // From/To unit dropdowns with swap button
+                Row(
+                  children: [
+                    Expanded(
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'From',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: state.fromUnit,
+                            isExpanded: true,
+                            items:
+                                currentUnits.map((unit) {
+                                  return DropdownMenuItem<String>(
+                                    value: unit,
+                                    child: Text(unit),
+                                  );
+                                }).toList(),
+                            onChanged: (unit) {
+                              if (unit != null) {
+                                notifier.setFromUnit(unit);
+                              }
                             },
                           ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.swap_horiz, size: 32),
+                      onPressed: notifier.swapUnits,
+                      tooltip: 'Swap units',
+                    ),
+                    Expanded(
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'To',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: state.toUnit,
+                            isExpanded: true,
+                            items:
+                                currentUnits.map((unit) {
+                                  return DropdownMenuItem<String>(
+                                    value: unit,
+                                    child: Text(unit),
+                                  );
+                                }).toList(),
+                            onChanged: (unit) {
+                              if (unit != null) {
+                                notifier.setToUnit(unit);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 24),
+                // Input field
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Enter value',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: notifier.setInputValue,
+                ),
+                const SizedBox(height: 24),
+                // Convert button
+                ElevatedButton.icon(
+                  onPressed: notifier.convert,
+                  icon: const Icon(Icons.compare_arrows),
+                  label: const Text('Convert'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Result
+                if (state.result.isNotEmpty)
+                  Card(
+                    color: Colors.black87,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${state.inputValue} ${state.fromUnit} =',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${state.result} ${state.toUnit}',
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // History
+                const Divider(),
+                const Text(
+                  'Conversion History',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (state.loading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                if (!state.loading)
+                  SizedBox(
+                    height: 200,
+                    child:
+                        state.history.isEmpty
+                            ? const Center(child: Text('No history yet.'))
+                            : ListView.builder(
+                              itemCount: state.history.length,
+                              itemBuilder: (context, index) {
+                                final record = state.history[index];
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: ListTile(
+                                    title: Text(
+                                      '${record.inputValue} ${record.fromUnit} → ${record.toUnit}',
+                                    ),
+                                    subtitle: Text(
+                                      '= ${record.result} (${record.unitType})',
+                                    ),
+                                    trailing: Text(
+                                      DateFormat(
+                                        'HH:mm:ss',
+                                      ).format(record.timestamp),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
