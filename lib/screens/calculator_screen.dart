@@ -11,6 +11,7 @@ class CalculatorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calculator = ref.watch(calculatorProvider);
+    final isScientificMode = calculator.isScientificMode;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -58,14 +59,18 @@ class CalculatorScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
+            if (!isScientificMode) const Spacer(flex: 2),
             Expanded(
-              flex: 1,
+              flex: isScientificMode ? 1 : 2,
               child: Display(
                 display: calculator.display,
                 equation: calculator.equation,
               ),
             ),
-            Expanded(flex: 2, child: const CalculatorButtons()),
+            Expanded(
+              flex: isScientificMode ? 2 : 4,
+              child: const CalculatorButtons(),
+            ),
           ],
         ),
       ),
@@ -102,10 +107,10 @@ class CalculatorScreen extends ConsumerWidget {
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.white),
                             onPressed: () async {
+                              Navigator.pop(context);
                               await ref
                                   .read(calculatorProvider.notifier)
                                   .clearHistory();
-                              Navigator.pop(context);
                             },
                           ),
                         ],
