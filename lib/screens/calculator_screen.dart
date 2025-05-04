@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/display.dart';
 import '../widgets/calculator_buttons.dart';
 import '../providers/calculator_provider.dart';
+import '../screens/converter_screen.dart';
 
 class CalculatorScreen extends ConsumerWidget {
   const CalculatorScreen({super.key});
@@ -24,6 +25,12 @@ class CalculatorScreen extends ConsumerWidget {
           onSelected: (value) {
             if (value == 'toggle') {
               ref.read(calculatorProvider.notifier).toggleScientificMode();
+            } else if (value == 'converter') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ConverterScreen(),
+                ),
+              );
             }
           },
           itemBuilder:
@@ -44,6 +51,17 @@ class CalculatorScreen extends ConsumerWidget {
                             ? 'Switch to Basic'
                             : 'Switch to Scientific',
                       ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'converter',
+                  child: Row(
+                    children: const [
+                      Icon(Icons.swap_horiz, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Switch to Converter'),
                     ],
                   ),
                 ),

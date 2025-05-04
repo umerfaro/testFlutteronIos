@@ -1,27 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'calculator_provider.dart';
+part of 'converter_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$calculatorHash() => r'3f0386040cbf7692edda9f21c8e5a65300934762';
+String _$converterHash() => r'c21da9bed08b313b1b93cf7669434c6c526f3d77';
 
-/// See also [Calculator].
-@ProviderFor(Calculator)
-final calculatorProvider =
-    AutoDisposeNotifierProvider<Calculator, CalculatorState>.internal(
-      Calculator.new,
-      name: r'calculatorProvider',
+/// See also [Converter].
+@ProviderFor(Converter)
+final converterProvider =
+    AutoDisposeNotifierProvider<Converter, ConverterState>.internal(
+      Converter.new,
+      name: r'converterProvider',
       debugGetCreateSourceHash:
           const bool.fromEnvironment('dart.vm.product')
               ? null
-              : _$calculatorHash,
+              : _$converterHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
-typedef _$Calculator = AutoDisposeNotifier<CalculatorState>;
+typedef _$Converter = AutoDisposeNotifier<ConverterState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
