@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/calculation.dart';
+import 'database_provider.dart';
 
 part 'calculator_provider.g.dart';
 
@@ -10,6 +11,7 @@ class CalculatorState {
   final String operation;
   final bool isNewNumber;
   final List<Calculation> history;
+  final bool isLoading;
   static const int maxDigits = 16;
 
   CalculatorState({
@@ -19,6 +21,7 @@ class CalculatorState {
     this.operation = '',
     this.isNewNumber = true,
     List<Calculation>? history,
+    this.isLoading = false,
   }) : history = history ?? [];
 
   CalculatorState copyWith({
@@ -28,6 +31,7 @@ class CalculatorState {
     String? operation,
     bool? isNewNumber,
     List<Calculation>? history,
+    bool? isLoading,
   }) {
     return CalculatorState(
       display: display ?? this.display,
@@ -36,6 +40,7 @@ class CalculatorState {
       operation: operation ?? this.operation,
       isNewNumber: isNewNumber ?? this.isNewNumber,
       history: history ?? this.history,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -44,7 +49,19 @@ class CalculatorState {
 class Calculator extends _$Calculator {
   @override
   CalculatorState build() {
-    return CalculatorState();
+    // Load history asynchronously
+    _loadHistory();
+    return CalculatorState(isLoading: true);
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final history = await DatabaseHelper.instance.getAllCalculations();
+      state = state.copyWith(history: history, isLoading: false);
+    } catch (e) {
+      // If there's an error, just continue with empty history
+      state = state.copyWith(history: [], isLoading: false);
+    }
   }
 
   String _formatNumber(String number) {
@@ -116,13 +133,15 @@ class Calculator extends _$Calculator {
     }
   }
 
-  void calculate() {
-    if (state.operation.isEmpty) return;
+  Future<void> calculate() async {
+    if (state.operation.isEmpty || state.display == 'Error') {
+      return;
+    }
 
-    double secondNumber = double.parse(state.display);
+    final secondNumber = double.parse(state.display);
+    final fullEquation =
+        '${state.firstNumber} ${state.operation} $secondNumber';
     double result = 0;
-    String fullEquation =
-        '${_formatNumber(state.firstNumber.toString())} ${state.operation} ${_formatNumber(secondNumber.toString())}';
 
     switch (state.operation) {
       case '+':
@@ -148,7 +167,6 @@ class Calculator extends _$Calculator {
         break;
     }
 
-    // Format the result to prevent scientific notation and limit decimal places
     String formattedResult = _formatNumber(result.toStringAsFixed(10));
 
     final newCalculation = Calculation(
@@ -157,8 +175,15 @@ class Calculator extends _$Calculator {
       timestamp: DateTime.now(),
     );
 
-    final updatedHistory = List<Calculation>.from(state.history)
-      ..add(newCalculation);
+    try {
+      // Save to database
+      await DatabaseHelper.instance.insertCalculation(newCalculation);
+      // Update state with new history
+      await _loadHistory();
+    } catch (e) {
+      // If there's an error saving to database, just continue with the calculation
+      print('Error saving calculation: $e');
+    }
 
     state = state.copyWith(
       display: formattedResult,
@@ -166,16 +191,19 @@ class Calculator extends _$Calculator {
       operation: '',
       equation: '',
       isNewNumber: true,
-      history: updatedHistory,
     );
   }
 
   void clear() {
-    final currentHistory = state.history;
-    state = CalculatorState(history: currentHistory);
+    state = CalculatorState(history: state.history);
   }
 
-  void clearHistory() {
-    state = state.copyWith(history: []);
+  Future<void> clearHistory() async {
+    try {
+      await DatabaseHelper.instance.clearHistory();
+      state = state.copyWith(history: []);
+    } catch (e) {
+      print('Error clearing history: $e');
+    }
   }
 }

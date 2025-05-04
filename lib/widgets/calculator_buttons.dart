@@ -16,122 +16,131 @@ class CalculatorButtons extends StatelessWidget {
     required this.onBackspace,
   });
 
-  Widget _buildButton(
-    BuildContext context,
-    dynamic content,
-    VoidCallback onPressed, {
-    Color? color,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color ?? Theme.of(context).colorScheme.secondary,
-            shape: const CircleBorder(),
-            padding: const EdgeInsets.all(24),
-          ),
-          child:
-              content is String
-                  ? Text(
-                    content,
-                    style: TextStyle(
-                      color: color == null ? Colors.white : Colors.black,
-                      fontSize: 24,
-                    ),
-                  )
-                  : content is IconData
-                  ? Icon(content, size: 24, color: Colors.black)
-                  : content,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildZeroButton(BuildContext context) {
-    return Expanded(
-      flex: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: ElevatedButton(
-          onPressed: () => onNumberPressed('0'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.secondary,
-            shape: const StadiumBorder(),
-            padding: const EdgeInsets.all(24),
-          ),
-          child: const Text(
-            '0',
-            style: TextStyle(color: Colors.white, fontSize: 24),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(8.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildButton(context, 'C', onClear, color: Colors.grey),
+                _buildButton('C', onClear, color: Colors.grey[800]),
+                _buildButton('⌫', onBackspace, color: Colors.grey[800]),
                 _buildButton(
-                  context,
-                  Icons.backspace_outlined,
-                  onBackspace,
-                  color: Colors.grey,
+                  '%',
+                  () => onOperationPressed('%'),
+                  color: Colors.grey[800],
                 ),
-                _buildButton(context, '%', () {}, color: Colors.grey),
-                _buildButton(context, '÷', () => onOperationPressed('÷')),
+                _buildButton(
+                  '÷',
+                  () => onOperationPressed('÷'),
+                  color: Colors.orange,
+                ),
               ],
             ),
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildButton(context, '7', () => onNumberPressed('7')),
-                _buildButton(context, '8', () => onNumberPressed('8')),
-                _buildButton(context, '9', () => onNumberPressed('9')),
-                _buildButton(context, '×', () => onOperationPressed('×')),
+                _buildButton('7', () => onNumberPressed('7')),
+                _buildButton('8', () => onNumberPressed('8')),
+                _buildButton('9', () => onNumberPressed('9')),
+                _buildButton(
+                  '×',
+                  () => onOperationPressed('×'),
+                  color: Colors.orange,
+                ),
               ],
             ),
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildButton(context, '4', () => onNumberPressed('4')),
-                _buildButton(context, '5', () => onNumberPressed('5')),
-                _buildButton(context, '6', () => onNumberPressed('6')),
-                _buildButton(context, '-', () => onOperationPressed('-')),
+                _buildButton('4', () => onNumberPressed('4')),
+                _buildButton('5', () => onNumberPressed('5')),
+                _buildButton('6', () => onNumberPressed('6')),
+                _buildButton(
+                  '-',
+                  () => onOperationPressed('-'),
+                  color: Colors.orange,
+                ),
               ],
             ),
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildButton(context, '1', () => onNumberPressed('1')),
-                _buildButton(context, '2', () => onNumberPressed('2')),
-                _buildButton(context, '3', () => onNumberPressed('3')),
-                _buildButton(context, '+', () => onOperationPressed('+')),
+                _buildButton('1', () => onNumberPressed('1')),
+                _buildButton('2', () => onNumberPressed('2')),
+                _buildButton('3', () => onNumberPressed('3')),
+                _buildButton(
+                  '+',
+                  () => onOperationPressed('+'),
+                  color: Colors.orange,
+                ),
               ],
             ),
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildZeroButton(context),
-                _buildButton(context, '.', () => onNumberPressed('.')),
-                _buildButton(context, '=', onCalculate),
+                _buildButton('0', () => onNumberPressed('0'), flex: 2),
+                _buildButton('.', () => onNumberPressed('.')),
+                _buildButton('=', onCalculate, color: Colors.orange),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildButton(
+    String text,
+    VoidCallback onPressed, {
+    Color? color,
+    int flex = 1,
+  }) {
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Material(
+          color: color ?? Colors.grey[900],
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onPressed,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                    color: color == Colors.orange ? Colors.white : Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

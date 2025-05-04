@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/display.dart';
 import '../widgets/calculator_buttons.dart';
@@ -46,7 +47,8 @@ class CalculatorScreen extends ConsumerWidget {
                         .handleOperation(operation),
                 onClear: () => ref.read(calculatorProvider.notifier).clear(),
                 onCalculate:
-                    () => ref.read(calculatorProvider.notifier).calculate(),
+                    () async =>
+                        await ref.read(calculatorProvider.notifier).calculate(),
                 onBackspace:
                     () =>
                         ref.read(calculatorProvider.notifier).handleBackspace(),
@@ -64,7 +66,10 @@ class CalculatorScreen extends ConsumerWidget {
       builder:
           (context) => Consumer(
             builder: (context, ref, child) {
-              final history = ref.watch(calculatorProvider).history;
+              final calculator = ref.watch(calculatorProvider);
+              if (calculator.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
               return Container(
                 color: Theme.of(context).colorScheme.surface,
                 child: Column(
@@ -84,8 +89,8 @@ class CalculatorScreen extends ConsumerWidget {
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.white),
-                            onPressed: () {
-                              ref
+                            onPressed: () async {
+                              await ref
                                   .read(calculatorProvider.notifier)
                                   .clearHistory();
                               Navigator.pop(context);
@@ -96,25 +101,42 @@ class CalculatorScreen extends ConsumerWidget {
                     ),
                     Expanded(
                       child: ListView.builder(
-                        itemCount: history.length,
+                        itemCount: calculator.history.length,
                         reverse: true,
                         itemBuilder: (context, index) {
-                          final calculation = history[index];
-                          return ListTile(
-                            title: Text(
-                              calculation.expression,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            subtitle: Text(
-                              '= ${calculation.result}',
-                              style: const TextStyle(
-                                color: Colors.orange,
-                                fontSize: 18,
+                          final calculation = calculator.history[index];
+                          return GestureDetector(
+                            onLongPress: () {
+                              final textToCopy =
+                                  '${calculation.expression} = ${calculation.result}';
+                              Clipboard.setData(
+                                ClipboardData(text: textToCopy),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Calculation copied to clipboard',
+                                  ),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            child: ListTile(
+                              title: Text(
+                                calculation.expression,
+                                style: const TextStyle(color: Colors.white),
                               ),
-                            ),
-                            trailing: Text(
-                              '${calculation.timestamp.hour.toString().padLeft(2, '0')}:${calculation.timestamp.minute.toString().padLeft(2, '0')}',
-                              style: const TextStyle(color: Colors.grey),
+                              subtitle: Text(
+                                '= ${calculation.result}',
+                                style: const TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              trailing: Text(
+                                '${calculation.timestamp.hour.toString().padLeft(2, '0')}:${calculation.timestamp.minute.toString().padLeft(2, '0')}',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
                             ),
                           );
                         },

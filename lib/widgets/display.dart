@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class Display extends StatelessWidget {
   final String display;
@@ -9,33 +10,47 @@ class Display extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      alignment: Alignment.bottomRight,
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Text(
-              equation,
-              style: const TextStyle(color: Colors.grey, fontSize: 24),
-              maxLines: 1,
+          if (equation.isNotEmpty)
+            GestureDetector(
+              onLongPress: () {
+                Clipboard.setData(ClipboardData(text: equation));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Equation copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Text(
+                equation,
+                style: const TextStyle(fontSize: 24, color: Colors.grey),
+                textAlign: TextAlign.end,
+              ),
             ),
-          ),
           const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: display));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Result copied to clipboard'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
             child: Text(
               display,
               style: const TextStyle(
-                color: Colors.white,
                 fontSize: 48,
-                fontWeight: FontWeight.w300,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              maxLines: 1,
+              textAlign: TextAlign.end,
             ),
           ),
         ],
