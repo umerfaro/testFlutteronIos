@@ -8,8 +8,7 @@ part 'calculator_provider.g.dart';
 class CalculatorState {
   final String display;
   final String equation;
-  final double firstNumber;
-  final String operation;
+  final String currentExpression;
   final bool isNewNumber;
   final List<Calculation> history;
   final bool isLoading;
@@ -19,8 +18,7 @@ class CalculatorState {
   CalculatorState({
     this.display = '0',
     this.equation = '',
-    this.firstNumber = 0,
-    this.operation = '',
+    this.currentExpression = '',
     this.isNewNumber = true,
     List<Calculation>? history,
     this.isLoading = false,
@@ -30,8 +28,7 @@ class CalculatorState {
   CalculatorState copyWith({
     String? display,
     String? equation,
-    double? firstNumber,
-    String? operation,
+    String? currentExpression,
     bool? isNewNumber,
     List<Calculation>? history,
     bool? isLoading,
@@ -40,8 +37,7 @@ class CalculatorState {
     return CalculatorState(
       display: display ?? this.display,
       equation: equation ?? this.equation,
-      firstNumber: firstNumber ?? this.firstNumber,
-      operation: operation ?? this.operation,
+      currentExpression: currentExpression ?? this.currentExpression,
       isNewNumber: isNewNumber ?? this.isNewNumber,
       history: history ?? this.history,
       isLoading: isLoading ?? this.isLoading,
@@ -54,7 +50,6 @@ class CalculatorState {
 class Calculator extends _$Calculator {
   @override
   CalculatorState build() {
-    // Load history asynchronously
     _loadHistory();
     return CalculatorState(isLoading: true);
   }
@@ -84,119 +79,251 @@ class Calculator extends _$Calculator {
   }
 
   void handleBackspace() {
-    if (state.isNewNumber || state.display == '0' || state.display == 'Error') {
+    if (state.currentExpression.isEmpty) {
+      state = state.copyWith(display: '0', isNewNumber: true);
       return;
     }
 
-    final currentDisplay = state.display;
-    if (currentDisplay.length == 1) {
-      state = state.copyWith(display: '0');
-    } else {
-      state = state.copyWith(
-        display: currentDisplay.substring(0, currentDisplay.length - 1),
-      );
-    }
+    final newExpression = state.currentExpression.substring(
+      0,
+      state.currentExpression.length - 1,
+    );
+    state = state.copyWith(
+      currentExpression: newExpression,
+      display: newExpression.isEmpty ? '0' : newExpression,
+      isNewNumber: newExpression.isEmpty,
+    );
   }
 
   void handleNumber(String number) {
-    if (state.display.length >= CalculatorState.maxDigits &&
-        !state.isNewNumber) {
-      return; // Prevent adding more digits if max length reached
-    }
-
-    if (state.isNewNumber) {
-      state = state.copyWith(display: number, isNewNumber: false);
-    } else {
-      // Don't allow multiple decimal points
-      if (number == '.' && state.display.contains('.')) {
-        return;
-      }
-
-      state = state.copyWith(
-        display:
-            state.display == '0' && number != '.'
-                ? number
-                : state.display + number,
-      );
-    }
-  }
-
-  void handleOperation(String operation) {
-    if (state.operation.isEmpty) {
-      state = state.copyWith(
-        firstNumber: double.parse(state.display),
-        operation: operation,
-        equation: '${_formatNumber(state.display)} $operation',
-        isNewNumber: true,
-      );
-    } else {
-      calculate();
-      state = state.copyWith(
-        operation: operation,
-        equation: '${_formatNumber(state.firstNumber.toString())} $operation',
-      );
-    }
-  }
-
-  Future<void> calculate() async {
-    if (state.operation.isEmpty || state.display == 'Error') {
+    if (state.currentExpression.length >= CalculatorState.maxDigits) {
       return;
     }
 
-    final secondNumber = double.parse(state.display);
-    final fullEquation =
-        '${state.firstNumber} ${state.operation} $secondNumber';
-    double result = 0;
+    String newExpression = state.currentExpression;
 
-    switch (state.operation) {
-      case '+':
-        result = state.firstNumber + secondNumber;
-        break;
-      case '-':
-        result = state.firstNumber - secondNumber;
-        break;
-      case '×':
-        result = state.firstNumber * secondNumber;
-        break;
-      case '÷':
-        if (secondNumber == 0) {
-          state = state.copyWith(
-            display: 'Error',
-            equation: '',
-            operation: '',
-            isNewNumber: true,
-          );
-          return;
-        }
-        result = state.firstNumber / secondNumber;
-        break;
-    }
-
-    String formattedResult = _formatNumber(result.toStringAsFixed(10));
-
-    final newCalculation = Calculation(
-      expression: fullEquation,
-      result: formattedResult,
-      timestamp: DateTime.now(),
-    );
-
-    try {
-      // Save to database
-      await DatabaseHelper.instance.insertCalculation(newCalculation);
-      // Update state with new history
-      await _loadHistory();
-    } catch (e) {
-      // If there's an error saving to database, just continue with the calculation
-      print('Error saving calculation: $e');
+    // If expression is empty, just add the number
+    if (newExpression.isEmpty) {
+      newExpression = number;
+    } else if (state.isNewNumber) {
+      // If it's a new number and the last character is an operator, just add the number
+      if (_isOperator(newExpression[newExpression.length - 1])) {
+        newExpression += number;
+      } else {
+        // If it's a new number and no operator, replace the current number
+        newExpression = number;
+      }
+    } else {
+      // Don't allow multiple decimal points in a number
+      if (number == '.' && _lastNumberHasDecimal(newExpression)) {
+        return;
+      }
+      newExpression += number;
     }
 
     state = state.copyWith(
-      display: formattedResult,
-      firstNumber: result,
-      operation: '',
-      equation: '',
+      display: newExpression,
+      currentExpression: newExpression,
+      isNewNumber: false,
+    );
+  }
+
+  bool _lastNumberHasDecimal(String expression) {
+    if (expression.isEmpty) return false;
+
+    final parts = expression.split(RegExp(r'[+\-×÷]'));
+    if (parts.isEmpty) return false;
+
+    return parts.last.contains('.');
+  }
+
+  void handleOperation(String operation) {
+    // Don't allow operations on empty expression
+    if (state.currentExpression.isEmpty) {
+      return;
+    }
+
+    // Don't allow operations if the last character is a decimal point
+    if (state.currentExpression.endsWith('.')) {
+      return;
+    }
+
+    // Don't allow consecutive operators
+    if (_isOperator(
+      state.currentExpression[state.currentExpression.length - 1],
+    )) {
+      return;
+    }
+
+    state = state.copyWith(
+      currentExpression: state.currentExpression + operation,
+      display: state.currentExpression + operation,
       isNewNumber: true,
     );
+  }
+
+  bool _isOperator(String char) {
+    return ['+', '-', '×', '÷'].contains(char);
+  }
+
+  Future<void> calculate() async {
+    if (state.currentExpression.isEmpty) {
+      return;
+    }
+
+    try {
+      // Remove trailing operators before evaluation
+      String expressionToEvaluate = state.currentExpression;
+      while (_isOperator(
+        expressionToEvaluate[expressionToEvaluate.length - 1],
+      )) {
+        expressionToEvaluate = expressionToEvaluate.substring(
+          0,
+          expressionToEvaluate.length - 1,
+        );
+      }
+
+      if (expressionToEvaluate.isEmpty) {
+        state = state.copyWith(
+          display: '0',
+          currentExpression: '0',
+          isNewNumber: true,
+        );
+        return;
+      }
+
+      final result = _evaluateExpression(expressionToEvaluate);
+      final formattedResult = _formatNumber(result.toStringAsFixed(10));
+
+      final newCalculation = Calculation(
+        expression: expressionToEvaluate,
+        result: formattedResult,
+        timestamp: DateTime.now(),
+      );
+
+      try {
+        await DatabaseHelper.instance.insertCalculation(newCalculation);
+        await _loadHistory();
+      } catch (e) {
+        print('Error saving calculation: $e');
+      }
+
+      state = state.copyWith(
+        display: formattedResult,
+        currentExpression: formattedResult,
+        isNewNumber: true,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        display: 'Error',
+        currentExpression: '',
+        isNewNumber: true,
+      );
+    }
+  }
+
+  double _evaluateExpression(String expression) {
+    // Convert expression to postfix notation (Reverse Polish Notation)
+    final postfix = _infixToPostfix(expression);
+    return _evaluatePostfix(postfix);
+  }
+
+  List<String> _infixToPostfix(String expression) {
+    final List<String> output = [];
+    final List<String> operators = [];
+
+    final tokens = _tokenizeExpression(expression);
+
+    for (final token in tokens) {
+      if (_isNumber(token)) {
+        output.add(token);
+      } else if (_isOperator(token)) {
+        while (operators.isNotEmpty &&
+            _getPrecedence(operators.last) >= _getPrecedence(token)) {
+          output.add(operators.removeLast());
+        }
+        operators.add(token);
+      }
+    }
+
+    while (operators.isNotEmpty) {
+      output.add(operators.removeLast());
+    }
+
+    return output;
+  }
+
+  List<String> _tokenizeExpression(String expression) {
+    final List<String> tokens = [];
+    String currentNumber = '';
+
+    for (int i = 0; i < expression.length; i++) {
+      final char = expression[i];
+
+      if (_isOperator(char)) {
+        if (currentNumber.isNotEmpty) {
+          tokens.add(currentNumber);
+          currentNumber = '';
+        }
+        tokens.add(char);
+      } else {
+        currentNumber += char;
+      }
+    }
+
+    if (currentNumber.isNotEmpty) {
+      tokens.add(currentNumber);
+    }
+
+    return tokens;
+  }
+
+  bool _isNumber(String token) {
+    return double.tryParse(token) != null;
+  }
+
+  int _getPrecedence(String operator) {
+    switch (operator) {
+      case '×':
+      case '÷':
+        return 2;
+      case '+':
+      case '-':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  double _evaluatePostfix(List<String> postfix) {
+    final List<double> stack = [];
+
+    for (final token in postfix) {
+      if (_isNumber(token)) {
+        stack.add(double.parse(token));
+      } else {
+        final b = stack.removeLast();
+        final a = stack.removeLast();
+
+        switch (token) {
+          case '+':
+            stack.add(a + b);
+            break;
+          case '-':
+            stack.add(a - b);
+            break;
+          case '×':
+            stack.add(a * b);
+            break;
+          case '÷':
+            if (b == 0) throw Exception('Division by zero');
+            stack.add(a / b);
+            break;
+        }
+      }
+    }
+
+    return stack.last;
   }
 
   void clear() {

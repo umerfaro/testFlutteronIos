@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'dart:io';
 import 'screens/calculator_screen.dart';
 
 void main() {
+  // Initialize FFI for non-mobile platforms
+  if (!Platform.isAndroid && !Platform.isIOS) {
+    sqfliteFfiInit();
+  }
+
   runApp(const ProviderScope(child: CalculatorApp()));
 }
 

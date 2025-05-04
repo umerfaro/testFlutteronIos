@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/converter_provider.dart';
-import '../providers/conversion_database_helper.dart';
 
 // Conversion logic utility
 class UnitConverter {
