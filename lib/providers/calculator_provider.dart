@@ -13,7 +13,7 @@ class CalculatorState {
   final List<Calculation> history;
   final bool isLoading;
   final bool isScientificMode;
-  static const int maxDigits = 20;
+  static const int maxDigits = 40;
 
   CalculatorState({
     this.display = '0',
@@ -378,5 +378,13 @@ class Calculator extends _$Calculator {
     } catch (e) {
       state = state.copyWith(display: 'Error', equation: '', isNewNumber: true);
     }
+  }
+
+  void updateDisplay(String value) {
+    state = state.copyWith(
+      display: value,
+      currentExpression: value,
+      isNewNumber: true,
+    );
   }
 }
